@@ -1,5 +1,6 @@
 let ws = null;
 let controlledTabId = null;
+let providerId = null;
 
 // Connect to router
 function connectToRouter() {
@@ -7,12 +8,14 @@ function connectToRouter() {
   
   ws.onopen = () => {
     console.log('✅ Connected to DeepSeek Router');
+    // Generate a unique provider ID
+    providerId = 'provider-' + Math.random().toString(36).substr(2, 9);
     createControlledTab();
   };
   
   ws.onmessage = (event) => {
     const command = JSON.parse(event.data);
-    console.log('📥 Command received:', command.type);
+    console.log('📥 Command received:', command.type, command);
     handleCommand(command);
   };
   
@@ -38,8 +41,8 @@ async function createControlledTab() {
       files: ['content.js']
     });
     
-    // Notify router we're ready
-    sendMessage({ type: 'ready', tabId: controlledTabId });
+    // Notify router we're ready with READY message
+    sendMessage({ type: 'READY', providerId: providerId });
   } catch (error) {
     console.error('Error creating tab:', error);
   }
@@ -48,32 +51,40 @@ async function createControlledTab() {
 function handleCommand(command) {
   if (!controlledTabId) return;
   
+  console.log('🎯 Handling command:', command.type, 'for room:', command.roomId);
+  
   switch (command.type) {
-    case 'navigate':
-      chrome.tabs.update(controlledTabId, { url: command.url }, (tab) => {
-        console.log('🌐 Navigating to:', command.url);
+    case 'NAVIGATE':
+      chrome.tabs.update(controlledTabId, { url: command.payload.url }, (tab) => {
+        console.log('🌐 Navigating to:', command.payload.url);
+        // Wait for navigation then inject content script again
+        setTimeout(async () => {
+          try {
+            await chrome.scripting.executeScript({
+              target: { tabId: controlledTabId },
+              files: ['content.js']
+            });
+            // Initialize content script with roomId
+            chrome.tabs.sendMessage(controlledTabId, { 
+              type: 'INIT', 
+              roomId: command.roomId 
+            });
+          } catch (e) {
+            console.log('Re-injection skipped or failed:', e);
+          }
+        }, 1500);
       });
       break;
       
-    case 'scrape':
+    case 'WAIT_AND_SELECT':
+    case 'TYPE':
+    case 'CLICK':
+    case 'SCRAPE':
+    case 'IDLE':
+      // Forward to content script with roomId
       chrome.tabs.sendMessage(controlledTabId, {
-        type: 'scrape',
-        selector: command.selector
-      });
-      break;
-      
-    case 'click':
-      chrome.tabs.sendMessage(controlledTabId, {
-        type: 'click',
-        selector: command.selector
-      });
-      break;
-      
-    case 'type':
-      chrome.tabs.sendMessage(controlledTabId, {
-        type: 'type',
-        selector: command.selector,
-        text: command.text
+        ...command,
+        tabId: controlledTabId
       });
       break;
   }
@@ -87,10 +98,16 @@ function sendMessage(message) {
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (sender.tab?.id === controlledTabId) {
-    console.log('📨 From content script:', request.type);
-    sendMessage(request);
+  console.log('📨 From content script:', request.type, request);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    // Add roomId if present
+    const msg = { ...request };
+    if (request.roomId) {
+      msg.roomId = request.roomId;
+    }
+    ws.send(JSON.stringify(msg));
   }
+  return true;
 });
 
 // Start connection when extension loads
