@@ -1,0 +1,13 @@
+{
+  "name": "deepseek-provider",
+  "version": "1.0.0",
+  "description": "DeepSeek automation provider with lightweight router",
+  "main": "router/server.js",
+  "scripts": {
+    "start:router": "node router/server.js",
+    "start": "npm run start:router"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+}
