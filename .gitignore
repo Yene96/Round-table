@@ -19,6 +19,13 @@ node_modules/
 dist/
 build/
 target/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
 
 # Python
 __pycache__/
@@ -26,9 +33,49 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-*.so
+env/
+venv/
+.venv/
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+.MF
+tags
+TAGS
+id
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.vscode/
 
-# Compressed files
+# Node.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+node_modules/
+dist/
+build/
+.nyc_output
+coverage/
+.nyc_output/
+coverage/
+.reports/
+
+# Compression
 *.zip
 *.gz
 *.tar
@@ -51,4 +98,8 @@ __pycache__/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+
+# System
+.DS_Store
+Thumbs.db
 ```
